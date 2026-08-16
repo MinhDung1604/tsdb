@@ -1,0 +1,6 @@
+/exploring
+main
+*.out
+*.exe
+*.bin
+*.json
