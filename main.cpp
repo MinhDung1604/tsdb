@@ -4,19 +4,6 @@
 
 using namespace std;
 
-// Maps a timestamp to its byte offset in data.bin.
-// Sorted by timestamp so lookups can use binary search.
-struct IndexEntry {
-    int64_t timestamp;
-    int64_t offset;
-};
-
-// Scans data.bin and builds a sorted vector of IndexEntry.
-void buildIndex() {
-    ifstream in(DB_PATH, ios::binary);
-    // TODO
-}
-
 int main() {
     // --- Write two records from scratch ---
     {
