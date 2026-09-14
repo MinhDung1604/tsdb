@@ -1,6 +1,8 @@
 #include <fstream>
+#include <iostream>
 #include <stdexcept>
 #include "storage.h"
+#include "btree.h"
 
 using namespace std;
 
@@ -44,6 +46,22 @@ int main() {
         if (!in) throw runtime_error("Cannot open file for reading");
         Record r;
         printOrMissing(randomAccessRecord(in, 2, r), 2, r); // should now exist
+    }
+
+    // --- B+tree: insert out of order to force splits, then search ---
+    {
+        initBTree();
+        int64_t timestamps[] = {5000, 1000, 8000, 3000, 9000, 2000, 7000, 4000, 6000};
+        for (int64_t ts : timestamps)
+            btreeInsert(ts, ts * 10); // fake "offset" = ts * 10, just to see it round-trip
+
+        int64_t value;
+        for (int64_t ts : {3000, 6000, 12345}) {
+            if (btreeSearch(ts, value))
+                cout << "    btree: ts=" << ts << " -> offset=" << value << "\n";
+            else
+                cout << "    btree: ts=" << ts << " not found\n";
+        }
     }
 
     return 0;
