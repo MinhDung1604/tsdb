@@ -171,16 +171,24 @@ bool btreeSearch(int64_t key, int64_t& valueOut) {
 
     while (true) {
         BTreeNode node = readNode(in, pageId);
-        int i = 0;
-        while (i < node.numKeys && key > node.keys[i]) ++i;
 
         if (node.isLeaf) {
-            if (i < node.numKeys && node.keys[i] == key) {
-                valueOut = node.values[i];
-                return true;
+            // Leaves need an exact match, not a boundary descent.
+            for (int i = 0; i < node.numKeys; ++i) {
+                if (node.keys[i] == key) {
+                    valueOut = node.values[i];
+                    return true;
+                }
             }
             return false;
         }
+
+        // children[i]'s subtree holds keys < keys[i], so a key equal to a
+        // separator belongs in children[i+1] — this descent must mirror
+        // insertNonFull's, or a key can become unreachable once a later
+        // split moves it across a boundary.
+        int i = 0;
+        while (i < node.numKeys && key >= node.keys[i]) ++i;
         pageId = node.children[i];
     }
 }

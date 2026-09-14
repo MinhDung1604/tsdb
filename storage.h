@@ -1,8 +1,6 @@
 #pragma once
 #include <fstream>
 #include <string>
-#include <vector>
-#include <algorithm>
 
 struct Record {
     int64_t timestamp;
@@ -13,19 +11,8 @@ struct Header {
     int64_t count;
 };
 
-// Maps a timestamp to its byte offset in data.bin.
-// Sorted by timestamp so lookups can use binary search.
-struct IndexEntry {
-    int64_t timestamp;
-    int64_t offset;
-    bool operator<(const IndexEntry& other) const {
-        return timestamp < other.timestamp;
-    }
-};
-
 const int64_t HEADER_OFFSET = sizeof(Header);
 const std::string DB_PATH   = "data.bin";
-const std::string INDEX_PATH = "index.bin";
 
 // Seeks to byte 0 and writes h. Leaves the write cursor after the header.
 void writeHeader(std::ostream& out, const Header& h);
@@ -42,27 +29,13 @@ bool readRecord(std::istream& in, Record& r);
 // Reads the record at 0-based row index into out. Returns false if out of range.
 bool randomAccessRecord(std::istream& in, int row, Record& out);
 
-// Appends r after the last record and increments the header count.
+// Appends r after the last record, increments the header count, and
+// returns the byte offset r was written at (for the caller to index).
 // fs must be opened with ios::in | ios::out.
-void appendRecord(std::fstream& fs, const Record& r);
+int64_t appendRecord(std::fstream& fs, const Record& r);
 
 // Prints row and record fields to stdout.
 void printRecord(int row, const Record& r);
 
 // Prints the record if found, or a "does not exist" message otherwise.
 void printOrMissing(bool found, int row, const Record& r);
-
-// Scans data.bin and builds a sorted vector of IndexEntry.
-std:: vector<IndexEntry> buildIndex();
-
-// Builds the index from data.bin and writes it to index.bin.
-// Format: [int64_t count][IndexEntry 0][IndexEntry 1]...
-void writeIndex(const std::vector<IndexEntry>& index);
-
-// Binary searches index.bin for ts. Sets offset to the matching byte position in data.bin.
-// Returns false if ts is not found. Does not load the full index into memory.
-bool lookupByTimestamp(int64_t ts, int64_t& offset);
-
-// Looks up ts in index.bin, then fetches the matching record from data.bin into out.
-// Returns false if ts is not found.
-bool lookupRecord(int64_t ts, Record& out);

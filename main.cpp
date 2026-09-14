@@ -3,20 +3,23 @@
 #include <stdexcept>
 #include "storage.h"
 #include "btree.h"
+#include "db.h"
 
 using namespace std;
 
 int main() {
-    // --- Write two records from scratch ---
+    initDB();
+
+    // --- Insert records out of order, indexing each one in the B+tree ---
     {
-        ofstream out(DB_PATH, ios::binary);
-        if (!out) throw runtime_error("Cannot open file for writing");
-        writeHeader(out, Header{2});
-        writeRecord(out, Record{1000, 23.5});
-        writeRecord(out, Record{2000, 25.0});
+        fstream fs(DB_PATH, ios::binary | ios::in | ios::out);
+        if (!fs) throw runtime_error("Cannot open file for read+write");
+        insertRecord(fs, Record{2000, 25.0});
+        insertRecord(fs, Record{1000, 23.5});
+        insertRecord(fs, Record{3000, 10.5});
     }
 
-    // --- Sequential scan ---
+    // --- Sequential scan (order records were appended, not key order) ---
     {
         ifstream in(DB_PATH, ios::binary);
         if (!in) throw runtime_error("Cannot open file for reading");
@@ -26,41 +29,23 @@ int main() {
         while (readRecord(in, r)) printRecord(row++, r);
     }
 
-    // --- Random access ---
+    // --- Random access by row index ---
     {
         ifstream in(DB_PATH, ios::binary);
         if (!in) throw runtime_error("Cannot open file for reading");
         Record r;
         printOrMissing(randomAccessRecord(in, 0, r), 0, r);
-        printOrMissing(randomAccessRecord(in, 2, r), 2, r); // out of range — expects "does not exist"
+        printOrMissing(randomAccessRecord(in, 3, r), 3, r); // out of range — expects "does not exist"
     }
 
-    // --- Append a record, then verify it's readable ---
+    // --- Lookup by timestamp via the B+tree index ---
     {
-        fstream fs(DB_PATH, ios::binary | ios::in | ios::out);
-        if (!fs) throw runtime_error("Cannot open file for read+write");
-        appendRecord(fs, Record{3000, 10.5});
-    }
-    {
-        ifstream in(DB_PATH, ios::binary);
-        if (!in) throw runtime_error("Cannot open file for reading");
         Record r;
-        printOrMissing(randomAccessRecord(in, 2, r), 2, r); // should now exist
-    }
-
-    // --- B+tree: insert out of order to force splits, then search ---
-    {
-        initBTree();
-        int64_t timestamps[] = {5000, 1000, 8000, 3000, 9000, 2000, 7000, 4000, 6000};
-        for (int64_t ts : timestamps)
-            btreeInsert(ts, ts * 10); // fake "offset" = ts * 10, just to see it round-trip
-
-        int64_t value;
-        for (int64_t ts : {3000, 6000, 12345}) {
-            if (btreeSearch(ts, value))
-                cout << "    btree: ts=" << ts << " -> offset=" << value << "\n";
+        for (int64_t ts : {1000, 3000, 9999}) {
+            if (findRecord(ts, r))
+                cout << "    find: ts=" << ts << " -> value=" << r.value << "\n";
             else
-                cout << "    btree: ts=" << ts << " not found\n";
+                cout << "    find: ts=" << ts << " not found\n";
         }
     }
 

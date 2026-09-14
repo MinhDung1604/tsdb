@@ -49,8 +49,7 @@ void writeNode(std::ostream& out, int64_t pageId, const BTreeNode& node);
 int64_t allocatePage(std::fstream& fs, BTreeHeader& header);
 
 // Searches the tree for key. Sets valueOut to the matching record offset
-// (an offset into data.bin, same meaning as IndexEntry::offset).
-// Returns false if key is not present.
+// (a byte offset into data.bin). Returns false if key is not present.
 bool btreeSearch(int64_t key, int64_t& valueOut);
 
 // Inserts (key, value) into the tree, splitting full nodes on the way
