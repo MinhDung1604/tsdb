@@ -4,3 +4,5 @@ main
 *.exe
 *.bin
 *.json
+.vscode/
+.claude/
